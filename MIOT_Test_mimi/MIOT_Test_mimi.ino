@@ -22,6 +22,7 @@ int buttons_value;
 int velA = 512;
 int velB = 512;
 int velC = 512;
+int VEL_ARRAY[] = {velA, velB, velC};
 int MENU = 1;
 int MENU_SELECTOR_CHOICE = 1;
 int LEG_SELECTED = 0;
@@ -65,21 +66,6 @@ int MotorC_Speed = 0;  //Resolucion a 10bits, (2^10)-1 = 1023.
 const int freq = 20000;      //  Set up PWM Frequency
 const int res = 10;          //  Set up PWM Resolution. Resolucion a 10bits, (2^10)-1 = 1023 PWM analógica motor. 
 
-// Current Sensors configuration:
-
-#define Current_Sensor_A 36
-#define Current_Sensor_B 39
-#define Current_Sensor_C 34
-
-float CS_A_Value;
-float CS_B_Value;
-float CS_C_Value;
-
-float R1 = 6800.0;
-float R2 = 10000.0;
-float ajuste_entrada = 0.20;
-float Sensibilidad = 0.185; //For -5/+5 Limit Sensor Ampers.
-
 Preferences preferences;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -113,14 +99,15 @@ void setup() {
     Serial.println("New counter saved: " + String(counter));
     // Close the Preferences
     preferences.end();
+    get_saved_vel();
+    velA = VEL_ARRAY[0];
+    velB = VEL_ARRAY[1];
+    velC = VEL_ARRAY[2];
 }
 
 void loop() {
   set_button_data();
   get_menu_buttons();
-  CS_A_Value = get_Current_Sensor(Current_Sensor_A, ajuste_entrada-1.67, Sensibilidad);
-  CS_B_Value = get_Current_Sensor(Current_Sensor_B, ajuste_entrada, Sensibilidad);
-  CS_C_Value = get_Current_Sensor(Current_Sensor_C, ajuste_entrada-0.1, Sensibilidad);
   PREVIOUS_BUTTON = Button_Data;
   delay(10);
 }
@@ -136,12 +123,6 @@ void analog_value_screen(){
   display.print("Analog Value: ");
   display.println(buttons_value);
   display.setCursor(0,20);
-  display.print("CS: ");
-  display.print(CS_A_Value);
-  display.print(", ");
-  display.print(CS_B_Value);
-  display.print(", ");
-  display.print(CS_C_Value);
   display.display();
 }
 
@@ -182,8 +163,6 @@ void set_button_data(){
   else {
       Button_Data = 0;
     }
-  Serial.print("Buttons data: ");
-  Serial.println(Button_Data);
 }
 
 void default_buttons(){
@@ -288,7 +267,7 @@ void leg_selector(){
     case 3:
       LEG_SELECTED = LEG_SELECTOR_CHOICE;
       LEG_SELECTOR_CHOICE = 1;
-      MENU = 4
+      MENU = 4;
       break;
     case 4:
       MENU = 1;
@@ -320,67 +299,80 @@ void control_leg(){
       MOTOR_STATUS = "Stop";
       break;
     case 1:
-    switch (LEG_MODE)
-    {
-    case 0:
-        switch (LEG_SELECTED) {
-        case 0:
-          MotorA_Left(velA);
-          break;
-        case 1:
-          MotorB_Left(velB);
-          break;
-        case 2:
-          MotorC_Left(velC);
-          break;
-      }
-        break;
-    case 1:
-        switch (LEG_SELECTED) {
-            case 0:
-            MotorA_Rigth(velA);
+      switch (LEG_MODE)
+      {
+      case 0:
+          switch (LEG_SELECTED) {
+          case 0:
+            MotorA_Left(velA);
             break;
-            case 1:
-            MotorB_Rigth(velB);
+          case 1:
+            MotorB_Left(velB);
             break;
-            case 2:
-            MotorC_Rigth(velC);
+          case 2:
+            MotorC_Left(velC);
             break;
         }
         break;
-    }
+      case 1:
+          switch (LEG_SELECTED) {
+              case 0:
+              MotorA_Right(velA);
+            break;
+            case 1:
+            MotorB_Right(velB);
+            break;
+            case 2:
+            MotorC_Right(velC);
+            break;
+        }
+        break;
+      }
       break;
     case 2:
         switch (LEG_MODE)
         {
-        case 0:
-            switch (LEG_SELECTED) {
-                case 0:
-                velA = velA + 5;
-                break;
-                case 1:
-                velB = velB + 5;
-                break;
-                case 2:
-                velC = velC + 5;
-                break;
-            break;
-        
-        case 1:
-            switch (LEG_SELECTED) {
-                case 0:
-                velA = velA - 5;
-                break;
-                case 1:
-                velB = velB - 5;
-                break;
-                case 2:
-                velC = velC - 5;
-                break;
-            break;
+          case 0:
+              switch (LEG_SELECTED) {
+                  case 0:
+                  velA = velA + 5;
+                  break;
+                  case 1:
+                  velB = velB + 5;
+                  break;
+                  case 2:
+                  velC = velC + 5;
+                  break;
+              }
+              break;
+          case 1:
+              switch (LEG_SELECTED) {
+                  case 0:
+                  velA = velA - 5;
+                  break;
+                  case 1:
+                  velB = velB - 5;
+                  break;
+                  case 2:
+                  velC = velC - 5;
+                  break;
             }
+            break;
+         case 2:
+              switch (LEG_SELECTED) {
+                  case 0:
+                  velA = 512;
+                  break;
+                  case 1:
+                  velB = 512;
+                  break;
+                  case 2:
+                  velC = 512;
+                  break;
+              
+            }
+            break;
         }
-      }
       break;
     case 3:
       LEG_MODE = (LEG_MODE + 1) % 3;
@@ -389,6 +381,10 @@ void control_leg(){
       MENU = 2;
       break;
     }
+    VEL_ARRAY[0] = velA;
+    VEL_ARRAY[1] = velB;
+    VEL_ARRAY[2] = velC;
+    set_vel();
     leg_display();
 }
 
@@ -402,6 +398,9 @@ void leg_display(){
     break;
   case 1:
     mode_name = "Move DOWN And reduce voltage";
+    break;
+   case 2:
+    mode_name = "Reset";
     break;
   }
 
@@ -422,7 +421,7 @@ void leg_display(){
   display.setTextColor(WHITE);
   display.setCursor(0, 0);
   display.print("Selected leg: ");
-  display.println(SELECTED_LEG);
+  display.println(LEG_SELECTED);
   display.print("Mode: ");
   display.println(mode_name);
   display.print("Leg voltage: ");
@@ -495,14 +494,6 @@ void special_display(int seleted_motor, String motor_status){
   display.display();
 }
 
-float get_Current_Sensor(int currentpin, float ajuste_entrada, float Sensibilidad){
-  int adc = analogRead(currentpin);
-  float adc_voltage = adc * (3.3 / 4096.0);
-  float current_voltage = (adc_voltage * (R1+R2)/R2);
-  float current = (current_voltage - 2.5 + ajuste_entrada) / Sensibilidad;
-  return current;
-}
-
 void Motor_Moved(int ChannelA, int ChannelB, int SpeedA, int SpeedB){ // SpeedA o SpeedB uno de los dos tiene que ser 0.
   ledcWrite(ChannelA, SpeedA);
   ledcWrite(ChannelB, SpeedB);
@@ -532,14 +523,41 @@ void MotorC_Right(int MotorC_Speed){
   Motor_Moved(Channel_10, Channel_11, MotorC_Speed, 0);
 }
 
-void get_saved_times(int arr[], int listSize) {
+void set_vel() {
+    preferences.begin("miot", false);
+    size_t size = sizeof(VEL_ARRAY);
+    // Save as binary blob
+    preferences.putBytes("VEL_ARRAY", VEL_ARRAY, size);
+    preferences.end();
+}
+
+void get_saved_vel() {
+    preferences.begin("miot", false);
+
+    // Read
+    size_t bytesRead = preferences.getBytes("VEL_ARRAY", VEL_ARRAY, sizeof(VEL_ARRAY));
+    int itemsRead  = bytesRead / sizeof(int);
+
+    Serial.print("Items read vel: ");
+    Serial.println(itemsRead);
+    for (int i = 0; i < 3; i++) {
+        Serial.print("VEL_ARRAY[");
+        Serial.print(i);
+        Serial.print("] = ");
+        Serial.println(VEL_ARRAY[i]);
+      }
+
+    preferences.end();
+}
+
+void set_saved_times() {
     preferences.begin("miot", false);
     size_t size = sizeof(TIME_LIST);
     // Save as binary blob
     preferences.putBytes("TIME_LIST", TIME_LIST, size);
     preferences.end();
-
-void get_saved_times(int arr[], int listSize) {
+}
+void get_saved_times() {
     preferences.begin("miot", false);
 
     // Read
@@ -548,13 +566,6 @@ void get_saved_times(int arr[], int listSize) {
 
     Serial.print("Items read: ");
     Serial.println(itemsRead);
-    Serial.println(TIME_LIST);
-
-    for (int i = 0; i < itemsRead; i++) {
-    Serial.println(itemsRead[i]);
-    }
 
     preferences.end();
-}
-
 }
